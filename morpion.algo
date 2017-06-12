@@ -1,0 +1,238 @@
+// Laetitia Monnier
+
+CONST
+	MAXCOUPS = 9
+
+TYPE
+	tab = tableau [1..3,1..3] de CHARACTERE
+
+TYPE
+	tabSymbole = tableau [1..2] de CHARACTERE
+
+TYPE
+	tabPseudo = tableau [1..2] de CHAINE
+
+TYPE
+	tabScore = tableau [1..2] de ENTIER
+
+PROCEDURE initTableau(var plateau : tab)
+VAR
+	i, j : ENTIER
+debut
+	POUR i de 1 A 3 FAIRE
+		POUR j de 1 A 3 FAIRE
+			plateau[i,j] <- ' '
+		FINPOUR
+	FINPOUR
+FINPROCEDURE
+
+PROCEDURE affichagePlateau()
+VAR
+	i, j : ENTIER
+debut
+	ECRIRE(' ')
+	POUR i de 1 A 3 FAIRE
+		ECRIRE('   ', i)
+	FINPOUR
+	sautDeLigne()
+
+	ECRIRE(' ')
+	POUR i de 1 A 3 FAIRE
+		ECRIRE('   -')
+	FINPOUR
+	sautDeLigne()
+
+	POUR i de 1 A 3 FAIRE
+		ECRIRE(i)
+
+		POUR j de 1 A 4 FAIRE 
+			ECRIRE(' |  ')
+		sautDeLigne()
+
+		ECRIRE(' ')
+		POUR j := 1 A 3 FAIRE
+			ECRIRE('   -')
+		sautDeLigne()
+	FINPOUR
+	sautDeLigne()
+FINPROCEDURE
+
+PROCEDURE effaceEcranTour()
+VAR
+	compteur : ENTIER
+debut 
+	GOTOXY(1,10)
+	POUR compteur de 1 A 6 FAIRE
+		ECRIRE('                                                                                ')
+	GOTOXY(1,10)
+FINPROCEDURE
+
+PROCEDURE choixJoueur(var pseudos : tabPseudo)
+debut
+	ECRIRE('Joueur 1 : Entrez votre pseudo.')
+	LIRE(pseudos[1])
+	ECRIRE('Joueur 2 : Entrez votre pseudo.')
+	LIRE(pseudos[2])
+	effaceEcran
+FINPROCEDURE
+
+
+FONCTION symbole(n : ENTIER):CHARACTERE
+debut
+	CAS n PARMI
+		1 : symbole <- 'O'
+		2 : symbole <- 'X'
+	FINCASPARMI
+FINCONCTION
+
+PROCEDURE choixPion(var joueurs : tabSymbole)
+VAR 
+	n : ENTIER
+debut
+	ECRIRE('Joueur 1 : Si voulez-vous être le ', symbole(1), ' appuyez sur 1, sinon pour être le ', symbole(2), ' appuyez sur 2.')
+	LIRE(n)
+	joueurs[1] <- symbole(n)
+	joueurs[2] <- symbole((n MOD 2) + 1)
+	effaceEcran
+FINPROCEDURE
+
+FONCTION verification(plateau : tab; x, y : integer):BOOLEEN
+VAR
+	resultat : BOOLEEN
+debut 
+	resultat <- FAUX
+	SI (plateau[x,y] = 'X') OU (plateau[x,y] = 'O') ALORS
+		resultat <- VRAI
+	verification <- resultat
+FINCONCTION
+
+FONCTION verifVictoire(joueur : CHARACTERE; plateau : tab; x, y : ENTIER):BOOLEEN
+VAR
+	compteur : ENTIER
+	resultatX, resultatY : BOOLEEN
+debut
+	resultatX <- VRAI
+	resultatY <- VRAI
+
+	POUR compteur de 1 A 3 FAIRE
+		SI plateau[x, compteur] <> joueur ALORS
+			resultatX <- FAUX
+		SI plateau[compteur, y] <> joueur ALORS
+			resultatY <- FAUX
+	FINPOUR
+
+	SI ((x + y) MOD 2 = 0) ET (resultatX OR resultatY = FALSE) ALORS
+		resultatX <- VRAI
+		resultatY <- VRAI
+
+		POUR compteur de 1 A 3 FAIRE
+			SI plateau[compteur, compteur] <> joueur ALORS
+				resultatX <- FAUX
+			SI plateau[compteur, 4 - compteur] <> joueur ALORS
+				resultatY <- FAUX
+		FINPOUR
+	FINSI
+
+	verifVictoire <- resultatX OU resultatY
+FINCONCTION
+
+FONCTION tour(pseudo : string; joueur : char; var plateau : tab):BOOLEEN
+VAR
+	x, y : ENTIER
+debut
+	GOTOXY(1,10)
+	ECRIRE('A vous de jouer ', pseudo)
+	ECRIRE('Rentrez la coordonnée X de la case')
+	REPETER
+		GOTOXY(1,12)
+		LIRE(x)
+	JUSQU'A x <= 3
+	ECRIRE('Rentrez la coordonnée Y de la case')
+	REPETER
+		GOTOXY(1,14)
+		LIRE(y)
+	JUSQU'A y <= 3
+	SI verification(plateau, x, y) ALORS
+		REPETER
+			effaceEcranTour()
+			ECRIRE('La place est deja occupée ! Recommencez.')
+			ECRIRE('Rentrez la coordonnée X de la case')
+			LIRE(x)
+			ECRIRE('Rentrez la coordonnée Y de la case')
+			LIRE(y)
+		JUSQU'A verification(plateau, x, y) = FAUX
+		GOTOXY(x,y)
+		ECRIRE(joueur)
+	SINON
+		plateau[x,y] <- joueur
+		GOTOXY(x,y)
+		ECRIRE(joueur)
+	FINSI
+	effaceEcranTour()
+
+	tour <- verifVictoire(joueur, plateau, x, y)
+FINCONCTION
+
+// -- Programme Principal --
+VAR
+	pseudos : tabPseudo
+	joueurs : tabSymbole
+	scores : tabScore
+	plateau : tab
+	n, compteur, nbTour : ENTIER
+	fin : BOOLEEN
+	f : fichier texte
+DEBUT
+	ASSIGNER(f, 'scoreMorpion.txt')
+	REECRIRE(f)
+	REPETER 
+		effaceEcran
+		scores[1] <- 0
+		scores[2] <- 0
+		fin <- FAUX
+
+		choixJoueur(pseudos)
+		choixPion(joueurs)
+		ECRIRE('En combien de manches voulez-vous jouer ?')
+		LIRE(n)
+		REPETER
+			AJOUTER(f)
+			initTableau(plateau)
+			effaceEcran
+			affichagePlateau()
+			nbTour <- 0
+
+			REPETER 
+				POUR compteur de 1 A 2 FAIRE 
+					nbTour <- nbTour + 1
+
+					SI tour(pseudos[compteur], joueurs[compteur], plateau) ALORS
+						scores[compteur] <- scores[compteur] + 1
+						ECRIRE(pseudos[compteur], ' a gagné ! Voici les scores :')
+						ECRIRE(pseudos[1], ' : ', scores[1])
+						ECRIRE(pseudos[2], ' : ', scores[2])
+						SI (scores[compteur] = n DIV 2 + 1) ALORS fin <- VRAI
+						nbTour <- 9
+					FINSI
+
+					SI nbTour = 9 ALORS break
+				FINPOUR
+			JUSQU'A nbTour = 9
+		JUSQU'A fin
+
+		ECRIRE(f, 'Score de ', pseudos[1], ' : ', scores[1])
+		ECRIRE(f, 'Score de ', pseudos[2], ' : ', scores[2])
+		
+		SI scores[1] > scores[2] ALORS
+			ECRIRE(f, pseudos[1], ' a gagné cette partie.')
+			ECRIRE(f, ' ')
+		SINON
+			ECRIRE(f, pseudos[2], ' a gagné cette partie.')
+			ECRIRE(f, ' ')
+		FINSI
+
+		ECRIRE('Voulez-vous rejouer ? (1 = Oui / 0 = Non)')
+		LIRE(n)
+	JUSQU'A n = 0
+	FERMER(f)
+FIN
